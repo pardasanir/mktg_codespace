@@ -1,0 +1,182 @@
+---
+title: "Assignment 2: Polars Basics"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+jupyter: python3
+---
+
+## Your Name: REPLACE THIS WITH YOUR NAME
+
+### Goal
+- Analyze a transportation company's email marketing data set
+
+### Setup
+- Edit this starter file. Save the file as Lastname_Firstname_Assignment2.qmd
+- Run the following cell.
+
+```{python}
+#| echo: TRUE
+
+# Assignment 2
+
+import polars as pl
+
+# Load data as a polars dataframe
+
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+```
+
+::: {.callout-note}
+[Here](https://github.com/numktg/data/blob/main/email_dict.md){target="_blank"} you can find the data dictionary (i.e., definitions of each variable in the transportation data set)
+:::
+
+- To answer each assignment question, write your answer using the following format:
+
+```{python}
+#| echo: TRUE
+
+
+# Q1
+#
+# (your code goes here - remove the # for the lines containing code)
+# ...
+# ...
+
+```
+
+## Q1: Basic Data Inspection
+
+::: {.callout-note}
+Rationale: Before diving deep, marketers need to understand the structure and general content of the data. A preliminary inspection helps to frame subsequent analyses and ensures data quality.
+:::
+
+- Use an appropriate function to print the first few rows of the dataset.
+
+
+. . .
+
+```{python}
+# Q1
+
+
+
+```
+
+
+
+## Q2: Select
+
+1. Based on the `email` data set, select only the following columns: `ID`, `age`, `avg_distance`. Assign these 3 columns to a variable named `customers_basic`.
+2. Print the value of `customers_basic`.
+
+. . .
+
+```{python}
+# Q2
+
+
+
+```
+
+
+
+
+## Q3: Filter
+
+1. Filter the `email` data set to only include customers that are at least 30 years old. Assign this data set to a variable named `customers_30_and_above`.
+2. Print `customers_30_and_above`.
+
+. . .
+
+```{python}
+# Q3
+
+
+
+```
+
+
+
+## Q4: Complex Filter
+
+::: {.callout-note}
+Rationale: Segmenting customers by age and purchase activity helps marketers identify potentially loyal and high-revenue-generating customer segments.
+:::
+
+
+1. Filter the `email` dataset to only include customers older than 30 and have made more than 5 purchases (`n_purchase`). Save the result to a new variable called `old_frequent_customers`.
+2. Print `old_frequent_customers`.
+
+. . .
+
+```{python}
+# Q4
+
+
+```
+
+
+## Q5 Add New Column
+::: {.callout-note}
+Rationale: Segmenting customers might involve creating additional columns to better understand their behaviors.
+:::
+
+
+1. Using the `email` data, add a new column named `avg_purchase_value`. This new column should be generated using the formula `total_revenue / n_purchase`. Save the new dataset to a variable named `email_purchases`.
+2. Display `email_purchases`.
+
+```{python}
+
+
+
+```
+
+
+## Q6 Summarize Data
+::: {.callout-note}
+Rationale: analyzing marketing data often involves reporting summary statistics such as mean, max, min.
+:::
+
+1. Take the `email` data, compute customers' average `n_purchase`. Use the alias() function to rename the column to `mean_n_purchase`.
+2. Compute the minimum `age`. Use the alias() function to rename the column to `min_age`.
+3. Compute the sum of `total_revenue`. Use the alias() function to rename the column to `sum_total_revenue`.
+    
+. . .
+
+```{python}
+# Q6
+
+
+```
+
+## Q7: Summarize data by group
+::: {.callout-note}
+Rationale: group-specific statistics provide useful information about different customer segments.
+:::
+
+
+1. Group the `email` data set by `success`. Then for each `success` level, compute the average `age`, maximum `n_purchase`, and, median `total_revenue`. Make sure summary columns are called `average_age`, `max_n_purchase`, and `median_total_revenue`, respectively.
+
+. . .
+
+```{python}
+# Q7
+
+
+```
+
+
+
+## Submit your work
+- Submit the completed qmd and html files to Canvas.
+- Make sure the script is named Lastname_Firstname_Assignment2.qmd and Lastname_Firstname_Assignment2.html.
+
+
+
