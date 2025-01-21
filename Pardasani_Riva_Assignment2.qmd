@@ -11,7 +11,7 @@ format:
 jupyter: python3
 ---
 
-## Your Name: REPLACE THIS WITH YOUR NAME
+## Your Name: Riva Pardasani
 
 ### Goal
 - Analyze a transportation company's email marketing data set
