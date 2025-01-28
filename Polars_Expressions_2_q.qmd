@@ -1,0 +1,275 @@
+
+---
+title: "Lecture Notes: Polars Expressions 2 & Assignment 3"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+jupyter: python3
+---
+
+# YOUR NAME HERE
+
+# Method Chaining, Aggregation, Missing Data, and Window Functions
+
+We will continue our discuss on expressions in Polars.
+
+
+## Setup
+
+```{python}
+#| echo: TRUE
+
+import polars as pl
+
+# Load data as a polars dataframe
+
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+```
+
+
+## Method Chaining
+- While Python is strict about identation and so on, it allows for linebreaks (i.e., starting a new line whenever desired) when the code is enclosed in parentheses.
+- Using the above, you can **chain** multiple methods together one after another. This allows for an easy way to express powerful and complex operations in readable code!
+- Python doesn't care about exactly how you break lines within parentheses. The recommended way is to start a newline with the dot (.) and then the method name.
+
+
+### Examples
+
+
+#### 0. The code below runs but can be harder to read
+```{python}
+
+dfe0 = email.filter(pl.col('age')>70).sort('age', descending= True).head()
+
+dfe0
+```
+
+
+
+
+#### 1. The code below will not run.
+- The code below should be commented out when previewing and generating the html file! (Otherwise you'll not be able to because of the errors)
+
+```{python}
+
+#email.filter(pl.col('age')>70)
+#.sort('age', descending= True)
+#.head()
+```
+
+
+#### 2. The code below will run and is recommended
+```{python}
+dfe2 = (
+    email.filter(pl.col('age')>70)    
+    .sort('age', descending= True)
+    .head()
+)
+
+dfe2
+```
+
+
+
+#### 3. The code below also runs but not recommended b/c bad formatting
+
+```{python}
+dfe3 = (
+email.filter(pl.
+col('age')>
+70)
+.
+
+
+
+sort('age', descending= True).
+head()
+)
+
+dfe3
+```
+
+
+#### Making sure dfe0, dfe2, dfe3 are all the same
+- We can use the **equals** method to check if two polars dataframes are identical.
+
+```{python}
+
+print(dfe0.equals(dfe2))
+print(dfe0.equals(dfe3))
+print(dfe2.equals(dfe3))
+
+
+```
+
+
+## Aggregation
+
+### Compute total revenue
+
+- Take the email dataset. Compute the sum of the "total_revenue" column in an email DataFrame. Name the new DataFrame "total_revenue" and display the result.
+
+```{python}
+
+total_revenue = (
+
+    
+)
+
+total_revenue
+
+
+```
+
+
+### Average Price by Second Class Status
+Take the email data set. Calculate the average price grouped by **is_second_class**. Save the new dataframe as avg_price_by_class. Display the result.
+
+
+```{python}
+
+avg_price_by_class = (
+    
+
+
+)
+print(avg_price_by_class)
+
+
+```
+
+### Filtering and Aggregation
+
+
+Calculate the total revenue for successful transactions in an email DataFrame. Specifically, filter the email DataFrame to include only rows where the "success" column is True, then sum the "total_revenue" column. Name the new dataframe "total_revenue_success" and display the result.
+
+```{python}
+
+total_revenue_success = (
+   
+    )
+
+print(total_revenue_success)
+
+
+
+```
+
+
+
+### GroupBy with Multiple Keys
+
+Calculate the average price for different combinations of transaction success and class type in an email DataFrame. Group the data by both the "success" and "is_second_class" columns, compute the mean of the "price" column for each group. Name the new dataframe 'avg_price_multi_group'. Display the results.
+
+```{python}
+
+avg_price_multi_group = (
+    
+    )
+
+print(avg_price_multi_group)
+
+
+```
+
+### List Columns
+Polars columns can contain lists (known as list columns).
+
+```{python}
+
+age_group_data = (
+    email.with_columns(
+        pl.when(pl.col('age')>=50)
+        .then(pl.lit("Senior"))
+        .when(pl.col("age")>=30)
+        .then(pl.lit("Middle"))
+        .otherwise(pl.lit("Young"))
+        .alias("age_group")
+    )
+    .group_by("age_group")
+    .agg(
+        pl.len(),
+        pl.col("ID"),
+        pl.col("age").mean().alias("mean_age"),
+    )
+    .sort("len", descending=True)
+    )
+
+age_group_data
+
+
+```
+
+
+
+## Missing Data
+
+- Sometimes, your data set will not be complete in the sense that for some rows there might be missing values.
+
+```{python}
+
+missing = pl.DataFrame(
+    {
+        "col1": [1, 2, 3, 4],
+        "col2": [1, 2, None, 4],
+        "col3": ["Yes", None, "Yes", "No"]
+    },
+)
+print(missing)
+
+
+```
+
+Having missing data can affect your computation. There are different ways to fill missing data. You can also use drop_nulls() to drop missing values.
+
+```{python}
+
+missing.select(
+    pl.col("col2").alias("c1"),
+    pl.col("col2").fill_null(strategy="forward").alias("c2"),
+    pl.col("col2").fill_null(strategy="backward").alias("c3")
+)
+
+```
+
+
+
+## Window Functions
+- Window functions allow us to construct dataframes with different levels of grouping.
+
+
+```{python}
+
+ email.select(
+    pl.col("success"),
+    pl.col("is_second_class"),
+    pl.col("price").mean().over("success").alias("average_price_by_success"),
+    pl.col("price").mean().over("is_second_class").alias("average_price_by_class"),
+    pl.col("price").mean().over(["success","is_second_class"]).alias("average_price_by_success_and_class"),
+)
+
+
+
+
+```
+
+
+# Summary
+
+In this lecture, we covered key expressions in Polars, including:
+
+1. **Method Chaining**
+
+2. **Aggregation**
+
+3. **Missing Data**
+
+4. **Window Functions**
+
+# <span style="color: red;">Submit this file as Assignment 3! </span>
