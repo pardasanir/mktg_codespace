@@ -1,0 +1,155 @@
+---
+title: "Lecture Notes: Visualization through Plotly Express"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+jupyter: python3
+---
+
+
+# YOUR NAME HERE
+
+# Visualization through Plotly.Express
+
+
+
+## Setup
+
+```{python}
+#| echo: TRUE
+
+import polars as pl
+import plotly.express as px 
+
+# Load data as a polars dataframe
+
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+```
+
+
+## Q1: Data Preprocessing
+
+1. From `email`, select the following columns: `age`, `avg_distance`, `n_purchase`. Save these columns to a new dataframe called `travelers`.
+
+2. Based on `travelers`, create a new column called `frequent_purchaser` based on the following rule: if `n_purchase` > 5, then `frequent_purchaser` = "Yes"; otherwise, `frequent_purchaser` = "No". Make sure this new column is added to `travelers`.
+
+3. Take `travelers` and add to it a new column called `age_group` based on the following rules:
+  - age < 30: Young
+  - 30 <= age <= 60: Middle
+  - age > 60: Old.
+
+
+```{python}
+# Q1
+
+
+
+```
+
+
+## Q2: Scatterplot 1
+
+Scatterplots are often used to describe the relationship between two numerical columns.
+
+1. Using `travelers`, create a scatterplot where the x-axis is `age` and y-axis is `avg_distance`. Save the scatterplot to a variable called `q2`. Then show `q2`.
+
+```{python}
+#Q2
+
+
+```
+
+
+
+## Q3: Scatterplot 2
+
+1. Using `travelers`, create a scatterplot where the x-axis is `age` and y-axis is `avg_distance`.
+2. Add a marginal plot along the x-axis that shows a boxplot.
+3. Color the points based on their `age_group`.
+4. Save the scatterplot to a variable called `q3`. Then show `q3`.
+
+```{python}
+#Q3
+
+
+```
+
+
+## Q4. Histogram 1
+
+Histograms are often used to describe the distribution of a numerical columns.
+
+1. Create a histogram of `age` from `travelers`.
+2. Save the histogram as `q4`, then display `q4`.
+
+```{python}
+# Q4
+
+
+```
+
+## Q5. Histogram 2
+
+1. Create a histogram of `age` from `travelers`.
+2. Use the facet_row argument to split visualization into two separate rows based on `frequent_purchaser`.
+3. Additionally, make sure the frequent purchasers have a different color from non-frequent purchasers.
+4. Specify the figure title as "Age by Purchase Frequency".
+5. Save the plot to `q5` and display it.
+
+
+```{python}
+# Q5
+
+
+
+
+```
+
+
+
+## Q6. Boxplot
+Boxplots are useful for displaying distribution of a numerical column broken down by categories.
+
+1. Create a boxplot of `avg_distance`, where the distribution of `avg_distance` is separated into categories defined by `age_group`.
+2. Make sure the different age groups use different colors.
+2. Save the graph as `q6` and display it.
+
+```{python}
+# Q6
+
+
+
+
+```
+
+
+## Q7. Bar Graph
+Bar charts are useful when comparing values for discrete categories.
+
+1. Create a bar chart to display the mean of `avg_distance` for each `age_group` category. You will need to process the `travelers` data set to get the data you need, then you can plot the bar graph using the processed data.
+2. Save the graph to `q7` and display it.
+
+```{python}
+# Q7
+
+
+
+
+```
+
+
+## Other useful visualizations
+- scatter matrix
+- animations
+- maps
+
+
+## Resources
+- [Datacamp Cheat Sheet](https://images.datacamp.com/image/upload/v1668605954/Marketing/Blog/Plotly_Cheat_Sheet.pdf)
+- [Cheat Sheet by Franz Diebold](https://franzdiebold.github.io/plotly-express-cheat-sheet/Plotly_Express_cheat_sheet.pdf)
