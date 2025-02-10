@@ -1,0 +1,205 @@
+---
+title: "Lecture Notes: Polars Transformations - Questions"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    embed-resources: true
+jupyter: python3
+---
+
+
+# YOUR NAME HERE
+
+# Data Frame Transformations
+
+1. Joins
+2. Pivot/Unpivot
+
+
+# Questions
+
+### Set up Dataframes
+```{python}
+
+import polars as pl
+
+# Create the first DataFrame ()
+df_campaigns = pl.DataFrame({
+    'campaign_id': [101, 102, 103, 104],
+    'campaign_name': ['Summer Sale', 'Winter Sale', 'Spring Promotion', 'Fall Discounts'],
+    'budget': [5000, 7000, 6000, 5500]
+})
+
+# Create the second DataFrame (df_responses) 
+df_responses = pl.DataFrame({
+    'campaign_id': [103, 104, 103, 104, 105, 106],
+    'customer_id': [2001, 2001, 2002, 2003, 2003, 2004],
+    'response': ['Clicked Ad', 'Subscribed', 'Made Purchase', 'Clicked Ad', 'Subscribed', 'Unsubscribed']
+})
+
+print("Campaigns DataFrame (df_campaigns):")
+print(df_campaigns)
+
+print("\nCustomer Responses DataFrame:")
+print(df_responses)
+
+
+```
+
+You have two DataFrames:
+
+1. df_campaigns: Contains details about marketing campaigns.
+
+- Columns:
+    - campaign_id: Unique identifier for each campaign.
+    - campaign_name: Name of the campaign.
+    - budget: Budget allocated for the campaign.
+
+2. df_responses: Contains customer responses to campaigns.
+
+- Columns:
+    - campaign_id: Identifier linking the response to a campaign.
+    - customer_id: Unique identifier for each customer.
+    - response: The type of response from the customer.
+
+
+# Q1
+
+Use a join operation to combine df_campaigns and df_responses that will give you only the records where there is a match in both DataFrames.
+
+```{python}
+# Q1
+
+q1 = (
+
+)
+
+print(q1)
+
+```
+
+
+# Q2
+
+Use a join operation to combine df_campaigns and df_responses that ensures all rows in df_responses are preserved.
+
+```{python}
+# Q2
+
+q2 = (
+
+)
+
+print(q2)
+
+
+
+```
+
+# Q3
+
+Use a join operation to combine df_campaigns and df_responses that will preserve all rows in both dataframes. Make sure there is only one `campaign_id` column after the join.
+
+```{python}
+# Q3
+
+q3 = (
+)
+
+print(q3)
+
+```
+
+
+# Q4
+
+Use a join operation to filter df_campaigns to keep only those campaigns that received customer responses.
+
+```{python}
+# Q4
+
+q4 = (
+
+)
+
+print(q4)
+
+
+```
+
+
+# Q5
+
+Use a join operation to filter df_responses to keep campaigns that do not have a match in df_campaigns.
+
+
+```{python}
+
+q5 = (
+
+)
+
+print(q5)
+
+
+```
+
+
+# Q6
+
+Take the df_responses dataframe. Create a pivot table that displays each customer's responses to all campaigns, with customers as rows, campaign IDs as columns, and the responses as the cell values.
+
+```{python}
+
+q6 = (
+
+)
+
+q6
+
+
+```
+
+# Q7
+
+You are given a dataframe `df_budgets` that contains quarterly budgets. Transform the dataframe into a long format that shows each campaign's budget per quarter. The resulting DataFrame should have the following columns:
+
+- campaign_id
+- campaign_name
+- quarter (e.g., 'Q1', 'Q2', 'Q3', 'Q4')
+- budget
+
+
+```{python}
+
+# Q7
+
+df_budgets = pl.DataFrame({
+    'campaign_id': [101, 102, 103, 104],
+    'campaign_name': ['Summer Sale', 'Winter Sale', 'Spring Promotion', 'Fall Discounts'],
+    'Q1': [1200, 1500, 1300, 1100],
+    'Q2': [1300, 1600, 1400, 1200],
+    'Q3': [1400, 1700, 1500, 1300],
+    'Q4': [1500, 1800, 1600, 1400]
+})
+
+print(df_budgets)
+
+
+q7 = (
+
+
+)
+
+print(q7)
+
+```
+
+
+## Submit your work
+- Submit the completed qmd and html files to Canvas.
+- Make sure the script is named Lastname_Firstname_Assignment5.qmd and Lastname_Firstname_Assignment5.html.
