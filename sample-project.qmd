@@ -1,0 +1,100 @@
+---
+title: "Sample Project"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+
+# Executive Summary
+
+# Introduction & Data Set Used
+
+- We study the automobile industry because ...
+- The data set we analyze comes from ..., and the files can be accessed through [Kaggle](https://kaggle.com)
+
+
+
+
+# Data Preprocessing and Exploratory Data Analysis
+
+- We explore the data set by visualizing the main variables of interest...
+
+```{python}
+# load required packages
+import polars as pl
+import plotly.express as px
+
+# Load data
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+# View the first few rows of the data
+email.head()
+
+```
+
+
+- First, we examine the distribution of avg_distance by plotting a histogram.
+
+```{python}
+
+px.histogram(email, x = 'avg_distance')
+
+
+```
+
+
+From the histogram, it looks like the range of the avg_distance traveled is mostly between 200 and 800 mpg.
+
+- Second, we examine some summary statistics of the avg_distance variable:
+
+```{python}
+#| echo: false
+
+# This will only show the results but not the code, because 'echo' is set to false
+email.select(
+  pl.col("avg_distance").mean().alias("mean_avg_distance"),
+  pl.col("avg_distance").max().alias("max_avg_distance"),
+  pl.col("avg_distance").min().alias("min_avg_distance"),
+)
+
+```
+# Model-Based Analysis
+
+We use XXX model to investigate the data set.
+
+
+## Customer Segmentation
+
+## Targeting
+
+## Binary Outcome Prediction
+
+## Continuous Outcome Prediction
+
+## RFM Analysis
+
+## ROMI Analysis
+
+# Results and Findings
+
+# Research Implications
+## Managerical Recommendations
+1.
+2.
+3.
+
+## Actionable Plans
+1.
+2.
+3.
+
+# Conclusion
+
+## Works Cited
