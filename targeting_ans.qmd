@@ -1,0 +1,381 @@
+---
+title: "Customer Targeting Analysis"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+
+## Loading Libraries
+
+```{python}
+# Import necessary libraries
+import polars as pl
+import numpy as np
+import pandas as pd
+import plotly.express as px
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+
+#uncomment the following two lines if you want to ignore warnings
+#import warnings
+#warnings.filterwarnings('ignore') 
+
+# Set random seed for reproducibility
+np.random.seed(10)
+
+```
+
+
+## Introduction
+
+This document demonstrates customer targeting using results from segmentation using K-means clustering and classification using XGboost, a high-performance machine learning method. We employ the `Polars` library for data manipulation and `Plotly Express` for visualization.
+
+
+
+
+## Customer Data Loading and Preparation
+
+Let's go back to our customer dataset. We will load in the data, segment the customers, then train classification methods so that we can predict customer segment assignments for prospective/future customers.
+
+
+### Email Data
+
+```{python}
+# Load email dataset
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+# Select relevant columns for clustering
+email_bases = email.select([
+    "avg_distance",
+    "n_purchase",
+    "discount_purchase",
+    "n_reward",
+    "avg_npassengers",
+    "avg_price"
+])
+```
+
+## K-means Clustering
+
+- create k-means pipeline
+```{python}
+def create_pipeline(num_clusters, random_seed = 42):
+    """
+    Creates a machine learning pipeline with a scaler and KMeans.
+    """
+    pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        ('kmeans', KMeans(n_clusters=num_clusters, random_state=random_seed))
+    ])
+    return pipeline
+
+
+
+```
+
+- Run k-means with k = 3
+```{python}
+
+optimal_k = 3
+
+# Run K-means clustering
+
+email_kmeans_pipeline = create_pipeline(optimal_k)
+email_kmeans_pipeline.fit(email_bases)
+
+
+# Add cluster assignments to the original data
+email_with_clusters = email.with_columns(
+    pl.Series(
+        "segment_number",
+        email_kmeans_pipeline['kmeans'].labels_ + 1
+        ).cast(pl.Utf8).cast(pl.Categorical)  # Make cluster labels 1-indexed
+)
+
+email_with_clusters.head()
+
+
+```
+
+## Merging with Demographic Data
+
+### Load Demographics
+
+```{python}
+# Load demographic data
+demo = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email_demo.csv")
+
+# Combine email and demo data using a left join
+email_joined = email_with_clusters.join(demo, on='ID', how='left')
+
+# Convert to Pandas DataFrame for easier handling with sklearn
+email_df = email_joined.to_pandas()
+
+# Encode the target variable using LabelEncoder
+label_encoder = LabelEncoder()
+
+email_df['segment_number'] = label_encoder.fit_transform(email_joined['segment_number'])
+
+# Define features and target
+features = ['age', 'Education', 'Income', 'Marital_Status', 'Occupation', 'Children', 'Region', 'Gender']
+target = 'segment_number'
+```
+
+## Data Splitting
+
+```{python}
+# Split data into training and test sets
+train, test = train_test_split(email_df, test_size=0.3, random_state=101)
+```
+
+
+## Classification using Machine Learning Models
+
+### Additional pre-processing
+
+```{python}
+
+
+# Define column transformer for one-hot encoding categorical features
+categorical_features = ['Education', 'Marital_Status', 'Occupation', 'Region', 'Gender', 'Income']
+numeric_features = ['age', 'Children']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', 'passthrough', numeric_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ]
+)
+```
+
+
+
+### Train and Evaluate One Model
+
+- First, specify the model and build pipeline
+- Then, fit the model to the training data
+```{python}
+logit_model = LogisticRegression(max_iter=1000, solver='liblinear')
+
+pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', logit_model)
+])
+    
+# Fit the pipeline on training data
+pipeline.fit(train[features], train[target])
+```
+
+
+
+- Now, ready to predict on test set
+
+```{python}
+
+
+test['pred_seg'] = pipeline.predict(test[features])
+
+# Ensure target names are str (per classification_report requirement)
+target_names = [str(name) for name in label_encoder.classes_]
+
+# Create confusion matrix and compute accuracy
+conf_matrix = confusion_matrix(test[target], test['pred_seg'])
+accuracy = accuracy_score(test[target], test['pred_seg'])
+
+# Print results
+print(f"\nModel: Logistic regression")
+print("Confusion Matrix:\n", conf_matrix)
+print("Accuracy:", accuracy)
+
+```
+
+
+### Train and Evaluate Multiple Models
+
+Now we know the process of training one model, we will try multiple models together, and then pick the best model as our final model.
+
+```{python}
+# Define models to test
+models = {
+    'Linear Discriminant Analysis': LinearDiscriminantAnalysis(),
+    'Logistic Regression': LogisticRegression(max_iter=1000, solver='liblinear'),
+    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=101),
+    'XGBoost': XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=101)
+}
+
+
+# Initialize a dictionary to store accuracy scores for each model
+accuracy_scores = {}
+
+
+
+# Evaluate each model
+for model_name, model in models.items():
+    # Create a pipeline that first applies the preprocessor and then the classifier
+    pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', model)
+    ])
+    
+    # Fit the pipeline on training data
+    pipeline.fit(train[features], train[target])
+    
+    # Predict on test set
+    test['pred_seg'] = pipeline.predict(test[features])
+    
+    # Ensure target names are str (per classification_report requirement)
+    target_names = [str(name) for name in label_encoder.classes_]
+
+    # Create confusion matrix and compute accuracy
+    conf_matrix = confusion_matrix(test[target], test['pred_seg'])
+    accuracy = accuracy_score(test[target], test['pred_seg'])
+    accuracy_scores[model_name] = accuracy
+
+
+    # Print results
+    print(f"\nModel: {model_name}")
+    print("Confusion Matrix:\n", conf_matrix)
+    print("Accuracy:", accuracy)
+```
+
+- After running all models and saving the results to a dictionary, we will pick the model with the highest 
+
+# Select the model with the highest accuracy score
+
+- Based on the results, we pick the model with the highest accuracy. We'll use this model to make our final prediction.
+
+```{python}
+
+best_model_name = max(accuracy_scores, key=accuracy_scores.get)
+best_accuracy_score = accuracy_scores[best_model_name]
+
+```
+
+
+
+## Use Best Model to Predict Future Customers
+
+- First, load in the "prospect" data set, which contains prospective customers.
+
+```{python}
+# Load the prospective customer data
+prospect_pl = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email_prospect.csv")
+
+# Convert prospect data to Pandas DataFrame
+
+prospect_df = prospect_pl.to_pandas()
+
+# Use the same preprocessing pipeline
+# Only select features that match the training data
+prospect_features = prospect_df[features]
+```
+
+
+- Now, use the best model to make prediction
+
+```{python}
+# Initialize the best model pipeline
+best_model = models[best_model_name]
+
+# Create the pipeline for the best model
+best_model_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', best_model)
+])
+
+# Fit the best model pipeline on the entire dataset (training + test) for final predictions
+best_model_pipeline.fit(email_df[features], email_df[target])
+
+# Make predictions on the unseen data
+predicted = best_model_pipeline.predict(prospect_features)
+
+prospect_pl = prospect_pl.with_columns(
+    pl.Series(predicted).alias('predicted_segment')
+)
+
+
+# Display some of the predictions
+print(prospect_pl['predicted_segment'].head(15))
+```
+
+## Analyzing Profitability
+
+### Profitability by Segment
+
+```{python}
+# Analyze which segment is most profitable
+profitability = (
+    email_with_clusters
+    .group_by('segment_number')
+    .agg([
+        pl.col('total_revenue').mean().alias('avg_revenue'),
+        pl.len().alias('num_customers')
+        ])
+    .with_columns(pl.col('segment_number').cast(pl.Int64))
+    .sort('segment_number')
+)
+
+profitability
+```
+
+
+
+### Revenue Estimation
+
+```{python}
+# Estimate potential revenue from prospects
+revenue_estimate = (
+    prospect_pl
+    .join(profitability,
+          left_on='predicted_segment',
+          right_on='segment_number',
+          how='left')
+    .select(pl.col('avg_revenue'))
+    .sum()
+)
+
+print(revenue_estimate)
+
+# Print the revenue estimate in a readable format
+# Note that we convert dataframe to a number by extracting the cell [0,0] since this dataframe has only 1 element in it
+print(f"Estimated Revenue: {revenue_estimate[0,0]:.2f}")
+```
+
+## Conclusion
+
+In this analysis, we demonstrated customer segmentation using K-means and prediction using several models. We then use the best performing model to predict future customers' segment assignments. The segment with the highest average revenue should be targeted for future marketing strategies. The potential revenue from converting all prospects was also estimated. This approach helps in identifying the most valuable customer segments and optimizing marketing efforts.
+
+
+### Key Points in the Document
+
+
+1. **Data Loading and Preparation**: Loads the datasets using Polars and selects relevant columns for analysis.
+
+2. **K-means Clustering**: Performs K-means clustering on the email data to segment customers into three groups.
+
+3. **Merging with Demographic Data**: Joins the clustered email data with demographic information.
+
+4. **Data Splitting**: Splits the combined dataset into training and test sets.
+
+5. **Automatic Model Training and Selection**: Trains 4 different models to classify customers based on demographics and evaluates them with a confusion matrix. Selects best model based on accuracy score.
+
+6. **Predicting Future Customers**: Applies the selected model to predict the segment of new prospective customers.
+
+7. **Analyzing Profitability**: Identifies the most profitable customer segment and estimates potential revenue from prospects.
+
+
