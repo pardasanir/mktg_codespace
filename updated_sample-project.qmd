@@ -1,0 +1,109 @@
+---
+title: "Sample Project"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+
+# Executive Summary
+
+# Introduction & Data Set Used
+
+- We study the automobile industry because ...
+- The data set we analyze comes from ..., and the files can be accessed through [Kaggle](https://kaggle.com)
+
+
+
+
+# Data Preprocessing and Exploratory Data Analysis
+
+- We explore the data set by visualizing the main variables of interest...
+
+```{python}
+# load required packages
+import polars as pl
+import plotly.express as px
+
+# Load data
+email = pl.read_csv("https://raw.githubusercontent.com/numktg/data/main/email.csv")
+
+# View the first few rows of the data
+email.head()
+
+```
+
+
+- First, we examine the distribution of rating by plotting a histogram.
+
+```{python}
+
+px.histogram(email, x = 'rating')
+
+
+```
+
+
+From the histogram, it looks like the range of the rating traveled is mostly between 200 and 800 mpg.
+
+- Second, we examine some summary statistics of the rating variable:
+
+```{python}
+#| echo: false
+
+# This will only show the results but not the code, because 'echo' is set to false
+email.select(
+  pl.col("rating").mean().alias("mean_rating"),
+  pl.col("rating").max().alias("max_rating"),
+  pl.col("rating").min().alias("min_rating"),
+)
+
+```
+# Model-Based Analysis
+
+We use XXX model to investigate the data set.
+
+
+#
+# Introduction & Data Set Used
+
+The dataset `n_movies.csv` comprises a range of movies and TV shows with attributes such as title, year, certificate, duration, genre, rating, description, stars, and votes. This analysis aims to explore trends in the film and television industry, focusing on how different genres and certificates influence viewer ratings and popularity.
+
+
+# Data Preprocessing
+
+Before diving into the analysis, it's crucial to clean the data and handle missing values. The steps below outline the preprocessing done on the dataset:
+
+```python
+# Handle missing values
+movies_data['year'] = movies_data['year'].fillna('Unknown')
+movies_data['certificate'] = movies_data['certificate'].fillna('Not Rated')
+movies_data['duration'] = movies_data['duration'].fillna('Unknown')
+movies_data['genre'] = movies_data['genre'].fillna('Unknown')
+movies_data['rating'] = movies_data['rating'].fillna(movies_data['rating'].mean())
+movies_data['votes'] = movies_data['votes'].str.replace(',', '').astype(float).fillna(0)
+```
+
+# Exploratory Data Analysis
+
+We explore key variables to understand the data better. The visualization below shows the distribution of ratings across different genres:
+
+```python
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Create a plot of average ratings by genre
+genre_ratings = movies_data.groupby('genre')['rating'].mean().sort_values(ascending=False)
+plt.figure(figsize=(10, 8))
+sns.barplot(x=genre_ratings.values, y=genre_ratings.index)
+plt.title('Average Rating by Genre')
+plt.xlabel('Average Rating')
+plt.ylabel('Genre')
+plt.show()
+```
