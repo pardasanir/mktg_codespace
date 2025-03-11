@@ -1,0 +1,85 @@
+---
+title: "Movie Certificate Classification Analysis"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+## Loading Libraries
+
+```{python}
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+```
+
+## Introduction
+
+This document demonstrates movie certificate classification using a RandomForest classifier to predict the content rating based on movie attributes from the `n_movies.csv`.
+
+## Data Loading and Preparation
+
+```{python}
+# Load movie dataset
+movies_data = pd.read_csv("/path/to/n_movies.csv")
+
+# Data cleaning and preparation
+movies_data['votes'] = movies_data['votes'].str.replace(',', '').astype(float).fillna(0).astype(int)
+movies_data['rating'] = movies_data['rating'].fillna(movies_data['rating'].median())
+movies_data['genre'] = movies_data['genre'].apply(lambda x: x.split(',')[0] if pd.notnull(x) else 'Unknown')
+movies_data['year'] = movies_data['year'].str.extract('(\d4)').fillna(movies_data['year'].mode()[0]).astype(int)
+movies_data = movies_data.dropna(subset=['certificate'])
+
+# Feature and target selection
+features = ['year', 'genre', 'rating', 'votes']
+target = 'certificate'
+
+# Encoding categorical data
+categorical_features = ['year', 'genre']
+numeric_features = ['rating', 'votes']
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', 'passthrough', numeric_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ])
+```
+
+## Model Training and Evaluation
+
+```{python}
+# Splitting the dataset
+X_train, X_test, y_train, y_test = train_test_split(movies_data[features], movies_data[target], test_size=0.2, random_state=42)
+
+# Classifier pipeline
+clf = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(random_state=42))
+])
+
+# Training the classifier
+clf.fit(X_train, y_train)
+
+# Predicting and evaluating the model
+y_pred = clf.predict(X_test)
+cm = confusion_matrix(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+
+# Displaying results
+print("Confusion Matrix:\n", cm)
+print("Classification Report:\n", report)
+```
+
+## Conclusion
+
+This analysis provides an insight into the effectiveness of machine learning models in predicting movie certificates based on their attributes. The RandomForest classifier shows promising results, indicated by the classification metrics provided above.
