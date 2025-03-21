@@ -1,0 +1,323 @@
+---
+title: "RFM and ROMI"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+# Load and pre-process data
+```{python}
+
+# Import necessary libraries
+import polars as pl
+import numpy as np
+import datetime
+import plotly.express as px
+
+
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score,classification_report
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+
+# Load dataset
+# Download the following two files from google drives, and then drag and drop them into your codespace.
+
+
+observation_data = pl.read_csv("./customer_observation.csv", ignore_errors = True)
+
+
+purchaser = pl.read_csv("./customer_outcome.csv", ignore_errors = True)
+
+
+```
+
+
+
+
+# Goal
+
+The company has a customer transaction database. It wants to use the database to create R, F, M columns to predict who will purchase a new product.
+
+
+# Data Description
+We are loading in two data sets:
+
+- customer_observation.csv: contains transaction level data for customers. This is saved in a variable called 'observation_data'
+
+- customer_outcome.csv: contains new product purchasers data. This is saved in a variable called 'purchaser'.
+
+
+# Feature Engineering
+
+We will aggregate the transaction-level data (i.e., where each row is a transaction) into a customer-level data (i.e., where each row is a customer).
+
+
+## Q1 Generate the R, F, M Columns
+Specifically, generate the R, F, M columns.
+
+- R: compute the most recent transaction for each customer. (Use the 'days_since' column)
+
+- F: compute the total number of transactions for each customer.
+
+- M: compute the total revenue for each customer. (Use the 'Total' column.)
+
+Save the new customer-level data to a variable called 'observation'.
+
+```{python}
+# Customer-level data aggregation for observation period
+observation = (
+
+
+
+)
+```
+
+
+
+# Q2: Join Data Sets
+
+In order to train our prediction model, we will combine 'observation' with 'purchaser'. Use Left join to make sure every customer in observation shows up. If the 'made_purchase' column is null, it means the customer is a not a purchaser. Replace null with 0.
+
+Name the joined table 'customer_data'
+
+```{python}
+
+# Join the observation and prediction data on Customer.ID, with left join to include all observation customers
+customer_data = (
+
+
+)
+
+```
+
+
+# Visualize the R, F, M columns
+
+```{python}
+
+R_hist = px.histogram(customer_data, x = 'most_recent_transaction')
+R_hist.show()
+
+
+F_hist = px.histogram(customer_data, x = 'number_of_transactions')
+F_hist.show()
+
+
+
+M_hist = px.histogram(customer_data, x = 'total_revenue')
+M_hist.show()
+
+```
+
+
+Since the distributions of total_revenue and number_of_transactions are skewed, we will take a log transformation.
+
+```{python}
+# Log-transform for left-skewed distributions
+customer_data_transformed = customer_data.with_columns([
+    pl.col("total_revenue").log().alias("log_total_revenue"),
+    pl.col("number_of_transactions").log().alias("log_number_of_transactions"),
+])
+```
+
+
+## Visualize the transformed F & M columns
+
+```{python}
+
+F_trans_hist = px.histogram(customer_data_transformed, x = 'log_number_of_transactions')
+F_trans_hist.show()
+
+
+
+M_trans_hist = px.histogram(customer_data_transformed, x = 'log_total_revenue')
+M_trans_hist.show()
+
+```
+
+
+
+# Train classification models
+
+- Goal: predict who will make a purchase
+
+
+## Prepare data, Define predictors and target
+```{python}
+
+# Convert to pandas
+
+customer_data_transformed_df = customer_data_transformed.to_pandas()
+
+# Encode the target variable using LabelEncoder
+label_encoder = LabelEncoder()
+
+customer_data_transformed_df['made_purchase'] = label_encoder.fit_transform(customer_data_transformed_df['made_purchase'])
+
+# Define features and target
+features = ['most_recent_transaction', 'log_number_of_transactions', 'log_total_revenue']
+target = 'made_purchase'
+
+
+
+# Define column transformer for one-hot encoding categorical features
+categorical_features = []
+numeric_features = ['most_recent_transaction', 'log_number_of_transactions', 'log_total_revenue']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', 'passthrough', numeric_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ]
+)
+```
+
+
+## Split Data
+
+
+```{python}
+# Split data into training and test sets
+train, test = train_test_split(customer_data_transformed_df, test_size=0.3, random_state=101)
+```
+
+
+## Train Classification Models
+
+
+```{python}
+# Define models to test
+models = {
+    'Linear Discriminant Analysis': LinearDiscriminantAnalysis(),
+    'Logistic Regression': LogisticRegression(max_iter=1000, solver='liblinear'),
+    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=101),
+    'XGBoost': XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=101)
+}
+
+
+# Initialize a dictionary to store accuracy scores for each model
+accuracy_scores = {}
+
+
+
+# Evaluate each model
+for model_name, model in models.items():
+    # Create a pipeline that first applies the preprocessor and then the classifier
+    pipeline = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('classifier', model)
+    ])
+    
+    # Fit the pipeline on training data
+    pipeline.fit(train[features], train[target])
+    
+    # Predict on test set
+    test['pred_purchase'] = pipeline.predict(test[features])
+    
+    # Ensure target names are str (per classification_report requirement)
+    target_names = [str(name) for name in label_encoder.classes_]
+
+    # Create confusion matrix and compute accuracy
+    conf_matrix = confusion_matrix(test[target], test['pred_purchase'])
+    accuracy = accuracy_score(test[target], test['pred_purchase'])
+    accuracy_scores[model_name] = accuracy
+
+
+    # Print results
+    print(f"\nModel: {model_name}")
+    print("Confusion Matrix:\n", conf_matrix)
+    print("Accuracy:", accuracy)
+```
+
+
+
+# Select the model with the highest accuracy score
+
+- Based on the results, we pick the model with the highest accuracy. We'll use this model to make our final prediction.
+
+```{python}
+
+
+
+best_model_name = max(accuracy_scores, key=accuracy_scores.get)
+
+best_accuracy_score = accuracy_scores[best_model_name]
+
+best_model = models[best_model_name]
+
+best_model_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', best_model)
+])
+
+
+```
+
+- We can extract the predictied purchase probability for customers in the test set.
+
+
+```{python}
+
+best_model_pipeline.fit(train[features], train[target])
+
+predicted_outcome = best_model_pipeline.predict(test)
+predicted_prob = best_model_pipeline.predict_proba(test)
+
+
+test['pred_purchase'] = predicted_outcome
+test['pred_probability'] = predicted_prob[:,1]
+
+customer_test = pl.DataFrame(test)
+
+```
+
+# Q3: ROMI Computation
+
+Now, the 'customer_test' variable is a polars dataframe containing the test information, including the predictions (both the binary prediction and the actual probability of making a purchase.)
+
+- Assume we select the top 100 customers who are most likely to make a purchase (based on logistic regression prediction above) from the test set, and we send them each a marketing brochure costing $8 per person.
+- Assume that for each actual purchaser, the profit is $12.
+- Use the ROMI formula to calculate the ROMI of this specific campaign.
+- Hint: Since we know who in the test set actually made a purchase, you have all the information you need to compute the ROMI.
+
+
+```{python}
+
+# ROMI calculation
+num_customers_targeted = 100
+per_purchaser_profit = 12
+per_person_cost = 7.5
+
+# Finish the rest
+
+
+```
+
+### Key Points in the Document
+
+
+1. **Data Loading and Preparation**: Loads the datasets using Polars and selects relevant columns for analysis.
+
+2. **Feature Engineering - RFM**: Create R, F, M columns as part of feature engineering step.
+
+3. **Feature Transformation**: Use log-transformation to address the issue of skewness in the data.
+
+4. **Purchase Prediction**: Conduct classification analysis to predict likely purchasers.
+
+5. **ROMI Calculation**: Compute ROMI for a hypothetical campaign where we target top 100 customers who are most likely to make a purchase.
+
+
