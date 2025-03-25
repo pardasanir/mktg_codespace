@@ -1,0 +1,89 @@
+
+---
+title: "Predicting Movie Ratings"
+format: html
+---
+
+## Objective
+
+Train a few regression models to predict the **IMDb rating** of movies using data from `n_movies.csv`. The goal is to identify the model with the lowest RMSE.
+
+## Data Preparation
+
+We use the following columns as predictors:
+
+- `votes` (number of user votes, numeric)
+- `genre` (categorical, one-hot encoded)
+
+```{python}
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+# Load data
+df = pd.read_csv("n_movies.csv")
+
+# Drop rows with missing target or genre
+df_clean = df.dropna(subset=['rating', 'genre'])
+
+# Clean 'votes'
+df_clean['votes'] = df_clean['votes'].str.replace(',', '', regex=False)
+df_clean['votes'] = pd.to_numeric(df_clean['votes'], errors='coerce')
+df_clean = df_clean.dropna(subset=['votes'])
+
+# One-hot encode genre
+df_model = pd.get_dummies(df_clean[['votes', 'genre']], drop_first=True)
+df_model['rating'] = df_clean['rating']
+
+# Features and target
+X = df_model.drop(columns='rating')
+y = df_model['rating']
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=1)
+```
+
+## Modeling and Evaluation
+
+We compare three models:
+
+- Linear Regression
+- Decision Tree Regressor
+- Random Forest Regressor
+
+```{python}
+# Train models
+lr = LinearRegression().fit(X_train, y_train)
+dt = DecisionTreeRegressor(random_state=1).fit(X_train, y_train)
+rf = RandomForestRegressor(random_state=1).fit(X_train, y_train)
+
+# Evaluate RMSE
+from sklearn.metrics import mean_squared_error
+
+models = {
+    'Linear Regression': lr,
+    'Decision Tree': dt,
+    'Random Forest': rf
+}
+
+rmse_results = {}
+for name, model in models.items():
+    preds = model.predict(X_test)
+    rmse = mean_squared_error(y_test, preds, squared=False)
+    rmse_results[name] = rmse
+
+rmse_results
+```
+
+## Results
+
+| Model              | RMSE   |
+|-------------------|--------|
+| Linear Regression | 1.13   |
+| Decision Tree     | 1.43   |
+| Random Forest     | 1.19   |
+
+**Best model: Linear Regression**
