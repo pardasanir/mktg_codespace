@@ -1,0 +1,117 @@
+
+---
+title: "Customer Targeting Analysis"
+author: "Josh Snyder"
+execute:
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: true
+    self-contained: true
+jupyter: python3
+---
+
+## Introduction
+
+This analysis focuses on classifying movie/show certificates (e.g., TV-MA, TV-14) based on other attributes such as genre, duration, rating, and votes. After evaluating multiple classification models, we apply the best-performing model to predict the certificates of prospective movies.
+
+## Data Preparation
+
+```{python}
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
+# Load dataset
+n_movies = pd.read_csv('n_movies_clean.csv')
+
+# Features and target
+features = ['genre', 'duration_min', 'rating', 'votes']
+target = 'certificate'
+
+# Encode target
+label_encoder = LabelEncoder()
+n_movies[target] = label_encoder.fit_transform(n_movies[target])
+
+# Train-test split
+train, test = train_test_split(n_movies, test_size=0.3, random_state=42)
+
+# Preprocessing
+preprocessor = ColumnTransformer([
+    ('cat', OneHotEncoder(), ['genre']),
+    ('num', 'passthrough', ['duration_min', 'rating', 'votes'])
+])
+```
+
+## Model Training and Evaluation
+
+```{python}
+# Models
+models = {
+    'Logistic Regression': LogisticRegression(max_iter=1000),
+    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42),
+    'XGBoost': XGBClassifier(use_label_encoder=False, eval_metric='mlogloss'),
+    'LDA': LinearDiscriminantAnalysis()
+}
+
+# Accuracy results
+accuracy_scores = {}
+
+for name, model in models.items():
+    pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('classifier', model)
+    ])
+    
+    pipeline.fit(train[features], train[target])
+    preds = pipeline.predict(test[features])
+    
+    acc = accuracy_score(test[target], preds)
+    cm = confusion_matrix(test[target], preds)
+    accuracy_scores[name] = acc
+    
+    print(f"\nModel: {name}")
+    print("Confusion Matrix:\n", cm)
+    print("Accuracy:", acc)
+```
+
+## Best Model Selection
+
+```{python}
+best_model_name = max(accuracy_scores, key=accuracy_scores.get)
+print(f"Best Model: {best_model_name} with accuracy {accuracy_scores[best_model_name]:.2f}")
+
+# Fit final model on full data
+best_model = models[best_model_name]
+final_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', best_model)
+])
+final_pipeline.fit(n_movies[features], n_movies[target])
+```
+
+## Prediction on Prospective Data
+
+```{python}
+# Load synthetic prospective data
+prospect = pd.read_csv('synthetic_prospect_movies.csv')
+
+# Predict certificates
+predicted_certificates = final_pipeline.predict(prospect[features])
+prospect['predicted_certificate'] = label_encoder.inverse_transform(predicted_certificates)
+
+# Display predictions
+print(prospect.head(10))
+```
+
+## Conclusion
+
+In this assignment, we explored classification models to predict content certificates based on movie/show attributes. The best model was applied to prospective data, showing predictions for new content. This approach can help content providers pre-assess rating categories based on initial movie/show characteristics.
