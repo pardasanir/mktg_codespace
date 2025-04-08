@@ -1,0 +1,189 @@
+---
+title: "Sample Project"
+subtitle: "MKTG - LEE"
+execute: 
+  echo: true
+  eval: true
+format:
+  html:
+    code-fold: false
+    self-contained: true
+jupyter: python3
+---
+
+
+# Executive Summary
+
+# Introduction & Data Set Used
+
+- We study the automobile industry because ...
+- The data set we analyze comes from ..., and the files can be accessed through [Kaggle](https://kaggle.com)
+
+
+
+
+# Data Preprocessing and Exploratory Data Analysis
+
+- We explore the data set by visualizing the main variables of interest...
+
+```{python}
+# load required packages
+import polars as pl
+import plotly.express as px
+
+# Load data
+netflix = pl.read_csv("n_movies.csv")
+
+# View the first few rows of the data
+netflix.head()
+
+```
+
+
+- First, we examine the distribution of avg_distance by plotting a histogram.
+
+```{python}
+
+px.histogram(netflix, x = 'rating', y = 'votes')
+
+
+```
+
+
+From the histogram, it looks like the range of the avg_distance traveled is mostly between 200 and 800 mpg.
+
+- Second, we examine some summary statistics of the avg_distance variable:
+
+
+For each segment, describe its composition using bases and descriptor variables
+```{python}
+#| echo: false
+
+# This will only show the results but not the code, because 'echo' is set to false
+netflix.select(
+  pl.col("rating").mean().alias("mean_rating"),
+  pl.col("rating").max().alias("max_rating"),
+  pl.col("rating").min().alias("min_rating"),
+)
+
+
+```
+# Model-Based Analysis
+
+We use XXX model to investigate the data set.
+
+
+
+Create an elbow plot and decide the optimal number of segments
+
+```{python}
+import polars as pl
+import plotly.express as px
+from sklearn.pipeline import Pipeline
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+
+def create_pipeline(k, random_seed=10):
+    return Pipeline([
+        ('scaler', StandardScaler()),
+        ('kmeans', KMeans(n_clusters=k, random_state=random_seed))
+    ])
+
+
+def calculate_totwithinss(data, k):
+    kmeans_pipeline = create_pipeline(k)
+    kmeans_pipeline.fit(data)
+    return kmeans_pipeline['kmeans'].inertia_
+
+
+df = netflix.select(['rating'])
+
+# drop rows w NaN
+df = df.filter(pl.col('rating').is_not_null())
+
+X = df['rating'].to_numpy().reshape(-1, 1)
+
+# standardize data
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# calculate tot.withinss for different values of k
+k_values = range(1, 11)
+totwithinss_values = [calculate_totwithinss(X_scaled, k) for k in k_values]
+
+# create a DataFrame for results
+kmeans_results = pl.DataFrame({
+    'num_clusters': k_values,
+    'tot_withinss': totwithinss_values
+})
+
+# plot the elbow method using Plotly Express
+elbow_plot = px.line(
+    data_frame=kmeans_results.to_pandas(),
+    x='num_clusters',
+    y='tot_withinss',
+    markers=True,
+    labels={'num_clusters': 'Number of Clusters', 'tot_withinss': 'Total Within SS'},
+    title='Elbow Method for Optimal k'
+)
+
+# show the plot
+elbow_plot.show()
+
+```
+^ based on the elbow plot provided, the optimal number of clusters is 3
+
+
+
+Conduct final k-means to create the optimal number of segments and assign each observation to a segment
+
+```{python}
+# choose the number of clusters based on the elbow method
+optimal_k = 3
+
+# run K-means clustering
+kmeans_pipeline = create_pipeline(optimal_k)
+kmeans_pipeline.fit(X_scaled)  # X_scaled is the standardized version of your 'rating' data
+
+# add cluster assignments to the original data
+df_with_segments = df.with_columns(
+    pl.Series(
+        "segment_number",
+        kmeans_pipeline['kmeans'].labels_ + 1  
+    ).cast(pl.Utf8).cast(pl.Categorical)
+)
+
+df_with_segments.head()
+
+
+```
+
+## Customer Segmentation
+
+## Targeting
+
+## Binary Outcome Prediction
+
+## Continuous Outcome Prediction
+
+## RFM Analysis
+
+## ROMI Analysis
+
+# Results and Findings
+
+# Research Implications
+## Managerical Recommendations
+1.
+2.
+3.
+
+## Actionable Plans
+1.
+2.
+3.
+
+# Conclusion
+
+## Works Cited
